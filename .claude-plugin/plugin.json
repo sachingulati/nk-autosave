@@ -1,0 +1,33 @@
+{
+  "name": "nk-autosave",
+  "displayName": "Notekeeping Autosave",
+  "version": "0.1.0",
+  "description": "Saves Notekeeping work when a session goes idle: runs /nk:save --unattended after a set time with no prompt, once per break, in sessions where a Notekeeping skill ran and something was written since the last save.",
+  "author": {
+    "name": "Sachin Gulati"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/sachingulati/nk-autosave",
+  "repository": "https://github.com/sachingulati/nk-autosave",
+  "keywords": [
+    "notekeeping",
+    "autosave",
+    "idle",
+    "save",
+    "context"
+  ],
+  "userConfig": {
+    "idle_save_minutes": {
+      "type": "number",
+      "title": "Idle minutes before a save",
+      "description": "How long a session sits idle after Claude's last reply before nk-autosave saves it. Meant for auto-mode sessions; in manual mode the save's writes ask as usual. Under 55 keeps the save on a warm prompt cache. 0 turns idle saves off.",
+      "default": 30
+    },
+    "idle_save_promote": {
+      "type": "boolean",
+      "title": "Promote on idle saves",
+      "description": "Off: the idle save writes the work item's record and sets lasting facts aside (--no-promote); the next save you run promotes them. On: the idle save promotes as a normal save does.",
+      "default": false
+    }
+  }
+}
