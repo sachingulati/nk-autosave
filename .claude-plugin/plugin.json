@@ -1,7 +1,7 @@
 {
   "name": "nk-autosave",
   "displayName": "Notekeeping Autosave",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Saves Notekeeping work when a session goes idle: runs /nk:save --unattended after a set time with no prompt, once per break, in sessions where a Notekeeping skill ran and something was written since the last save.",
   "author": {
     "name": "Sachin Gulati"

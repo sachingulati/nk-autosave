@@ -23,7 +23,9 @@ runs out, it saves if both of these hold:
 
 - **A Notekeeping skill ran in this session** (`/nk:load`, `/nk:work`, a save), so there is a work item
   in play.
-- **Something was written since the last save** - an Edit, Write, NotebookEdit, Bash or PowerShell call.
+- **Something was written since the last save** - an Edit, Write or NotebookEdit outside the notes,
+  or a Bash or PowerShell command that was not read-only. A save's own writes - to a `.notekeeping`
+  store or Claude Code's memory folder - do not count, so a save you run is not followed by another.
 
 The save runs as a turn of its own, as if you had typed `/nk:save --unattended --no-promote`. It runs
 at most once per break: its own reply does not start the timer again, and the next prompt you type

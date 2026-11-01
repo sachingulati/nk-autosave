@@ -11,7 +11,11 @@ const world = (on: On) => {
     ran.push(`${e.command} ${e.args}`.trim())
     return { text: '' }
   })
-  on('tool.call', () => ({ result: {} }))
+  // A shell command reads as read-only when it starts with `git status`.
+  on('tool.call', (_, e) => {
+    const command = (e as { command?: string }).command ?? ''
+    return command.startsWith('git status') ? { result: {}, isReadOnly: true } : { result: {} }
+  })
   on('prompt.submit', (_, e) => ({ text: e.text }))
   on('turn.start', (_, e) => ({ turnId: e.turnId }))
   on('turn.complete', () => ({ text: '' }))
@@ -30,8 +34,9 @@ const typed = async ($: Engine, text = 'go on') => {
 const reply = ($: Engine, turnId: string) =>
   $.turn.complete({ turnId, answer: 'ok', durationMs: 1, isAborted: false, reason: 'answer' } as never)
 const skill = ($: Engine, name: string) => $.tool.call({ tool: 'Skill', skill: name } as never)
-const edit = ($: Engine) =>
-  $.tool.call({ tool: 'Edit', file_path: '/x', old_string: 'a', new_string: 'b' } as never)
+const edit = ($: Engine, file_path = '/x') =>
+  $.tool.call({ tool: 'Edit', file_path, old_string: 'a', new_string: 'b' } as never)
+const shell = ($: Engine, command: string) => $.tool.call({ tool: 'Bash', command } as never)
 
 const begin = async ($: Engine) =>
   $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true } as never)
@@ -134,4 +139,31 @@ test('a /clear forgets the old conversation', async ($, on) => {
   await reply($, t)
   await clock.advance(60 * MIN)
   expect(ran).toEqual([])
+})
+
+test('a save that writes the notes leaves nothing to save', async ($, on) => {
+  const { clock, ran } = world(on)
+  await begin($)
+  const t = await typed($)
+  await skill($, 'nk:load')
+  await edit($)
+  await skill($, 'nk:save')
+  await shell($, 'git status --short')
+  await edit($, String.raw`C:\Users\u\ws\.notekeeping\work\0001\session.md`)
+  await edit($, '/home/u/.claude/projects/-home-u-ws/memory/MEMORY.md')
+  await reply($, t)
+  await clock.advance(60 * MIN)
+  expect(ran).toEqual([])
+})
+
+test('a write outside the notes after a save saves again', async ($, on) => {
+  const { clock, ran } = world(on)
+  await begin($)
+  const t = await typed($)
+  await skill($, 'nk:load')
+  await skill($, 'nk:save')
+  await shell($, 'npm run build')
+  await reply($, t)
+  await clock.advance(30 * MIN)
+  expect(ran).toEqual(['nk:save --unattended --no-promote'])
 })

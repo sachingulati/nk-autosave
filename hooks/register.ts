@@ -4,6 +4,20 @@ type Options = { idle_save_minutes?: number; idle_save_promote?: boolean }
 
 // Tools whose call means the session may hold something a save would write.
 const WRITES = new Set(['Edit', 'Write', 'NotebookEdit', 'Bash', 'PowerShell'])
+const SHELLS = new Set(['Bash', 'PowerShell'])
+
+// A notes store or Claude Code's memory folder: what a save itself writes, not work to save.
+const NOTES_PATH = /[\\/]\.notekeeping[\\/]|[\\/]\.claude[\\/]projects[\\/][^\\/]+[\\/]memory[\\/]/
+
+type ToolEvent = { tool: string; file_path?: string; notebook_path?: string }
+
+// The call changed something a save would want to record.
+const isWork = (e: ToolEvent, result: { isReadOnly?: boolean }) => {
+  if (!WRITES.has(e.tool)) return false
+  if (SHELLS.has(e.tool)) return !result.isReadOnly
+  const path = e.file_path ?? e.notebook_path ?? ''
+  return !NOTES_PATH.test(path)
+}
 
 export const register: Register = (on, options) => {
   const { idle_save_minutes = 30, idle_save_promote = false } = options as Options
@@ -35,11 +49,17 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
-  // A skill the model called, and every write-type tool.
-  on('tool.call', ($, e, next) => {
+  // A skill the model called, and every write-type tool that changed something outside the notes.
+  // Only a shell call waits for its result, which says whether it ran read-only.
+  on('tool.call', async ($, e, next) => {
     if (e.tool === 'Skill') noteSkill(e.skill)
-    else if (WRITES.has(e.tool)) writtenSinceSave = true
-    return next(e)
+    if (!SHELLS.has(e.tool)) {
+      if (isWork(e as ToolEvent, {})) writtenSinceSave = true
+      return next(e)
+    }
+    const result = await next(e)
+    if (isWork(e as ToolEvent, result as { isReadOnly?: boolean })) writtenSinceSave = true
+    return result
   })
 
   // Typing anything cancels the timer and opens a new break.
